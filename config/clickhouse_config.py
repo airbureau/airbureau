@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env файла
+load_dotenv()
 
 CLICKHOUSE_CONFIG = {
     'host': os.getenv('CLICKHOUSE_HOST'),

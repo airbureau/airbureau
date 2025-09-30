@@ -1,5 +1,9 @@
 import sys
 import os
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -14,9 +18,13 @@ def test_connection():
 
         if missing_vars:
             print(f"❌ Missing environment variables: {missing_vars}")
+            print("💡 Make sure .env file exists and contains all required variables")
             return False
 
         print("✅ Environment variables found")
+        print(f"   Host: {os.getenv('CLICKHOUSE_HOST')}")
+        print(f"   User: {os.getenv('CLICKHOUSE_USER')}")
+        print(f"   Database: {os.getenv('CLICKHOUSE_DB')}")
 
         # Тестируем подключение
         ch = ClickHouseClient()
