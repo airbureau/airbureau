@@ -19,8 +19,10 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
           cd ~/airbureau
+          
+          # Получаем последний код (ОДИН раз)
           git pull origin main
-
+          
           # Создаем venv если не существует
           if [ ! -d "venv" ]; then
             python3 -m venv venv
@@ -32,11 +34,5 @@ jobs:
           # Обновляем pip и устанавливаем зависимости
           pip install --upgrade pip
           pip install -r requirements.txt
-          
-          # Получаем последний код
-          git pull origin main
-          
-          # Перезапускаем бота
-          # sudo systemctl restart tbot || echo "Service restart failed, continuing..."
           
           echo "✅ Deployment completed successfully!"
