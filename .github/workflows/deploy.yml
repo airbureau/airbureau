@@ -7,13 +7,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Deploy to server
-      uses: appleboy/ssh-action@master
+      uses: appleboy/ssh-action@v0.1.3
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
@@ -21,4 +20,8 @@ jobs:
         script: |
           cd ~/airbureau
           git pull origin main
-          # Дополнительные команды для перезапуска бота
+          # Установка зависимостей если нужно
+          pip install -r requirements.txt
+          # Перезапуск сервиса
+          # sudo systemctl restart trading-bot || echo "Service restart failed, continuing..."
+          echo "✅ Deployment completed successfully!"
