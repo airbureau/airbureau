@@ -49,7 +49,7 @@ def create_trading_tables():
     for table_name, schema in tables.items():
         ch.create_table(table_name, schema)
 
-    print("✅ All tables created successfully!")
+    print("✅ All trading tables created successfully!")
 
 
 if __name__ == "__main__":
