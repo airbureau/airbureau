@@ -1,3 +1,13 @@
+import sys
+import os
+
+# Добавляем корневую директорию в путь Python
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from utils.clickhouse_client import ClickHouseClient
 
 
