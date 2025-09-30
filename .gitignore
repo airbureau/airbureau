@@ -1,0 +1,29 @@
+# Конфиги с ключами
+config/
+secrets/
+*.env
+.env.local
+.env.production
+
+# Логи
+logs/
+*.log
+
+# Базы данных
+*.db
+*.sqlite3
+
+# Питон
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
