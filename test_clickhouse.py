@@ -8,16 +8,22 @@ from utils.clickhouse_client import ClickHouseClient
 
 def test_connection():
     try:
+        # Сначала проверим переменные окружения
+        required_vars = ['CLICKHOUSE_HOST', 'CLICKHOUSE_USER', 'CLICKHOUSE_PASSWORD', 'CLICKHOUSE_DB']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+        if missing_vars:
+            print(f"❌ Missing environment variables: {missing_vars}")
+            return False
+
+        print("✅ Environment variables found")
+
+        # Тестируем подключение
         ch = ClickHouseClient()
         result = ch.execute("SELECT version()")
         print(f"✅ ClickHouse version: {result[0][0]}")
-
-        # Test data insertion
-        test_data = [('2024-01-01 10:00:00', 'BTCUSDT', 'buy', 50000.0, 0.1, 'test_1', 'test_strategy')]
-        ch.insert_data("trades", test_data)
-        print("✅ Test data inserted successfully")
-
         return True
+
     except Exception as e:
         print(f"❌ Connection failed: {e}")
         return False

@@ -1,11 +1,11 @@
 import os
 
 CLICKHOUSE_CONFIG = {
-    'host': os.getenv('CLICKHOUSE_HOST', 'your-host.mdb.yandexcloud.net'),
+    'host': os.getenv('CLICKHOUSE_HOST'),
     'port': int(os.getenv('CLICKHOUSE_PORT', 9440)),
-    'user': os.getenv('CLICKHOUSE_USER', 'your-username'),
-    'password': os.getenv('CLICKHOUSE_PASSWORD', 'your-password'),
-    'database': os.getenv('CLICKHOUSE_DB', 'your-database'),
+    'user': os.getenv('CLICKHOUSE_USER'),
+    'password': os.getenv('CLICKHOUSE_PASSWORD'),
+    'database': os.getenv('CLICKHOUSE_DB'),
     'secure': True,
     'verify': True
 }
