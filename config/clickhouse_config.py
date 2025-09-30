@@ -7,5 +7,6 @@ CLICKHOUSE_CONFIG = {
     'password': os.getenv('CLICKHOUSE_PASSWORD'),
     'database': os.getenv('CLICKHOUSE_DB'),
     'secure': True,
-    'verify': True
+    'verify': True,
+    'ca_certs': '/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt'
 }
