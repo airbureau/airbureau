@@ -12,15 +12,27 @@ class ClickHouseClient:
 
     def connect(self):
         try:
+            # Создаем копию конфига без sensitive данных для логирования
+            log_config = CLICKHOUSE_CONFIG.copy()
+            log_config['password'] = '***'
+            logger.info(f"Connecting to ClickHouse with config: {log_config}")
+
             self.client = Client(**CLICKHOUSE_CONFIG)
             logger.info("✅ Successfully connected to ClickHouse")
+
+            # Проверяем подключение простым запросом
+            self.client.execute('SELECT 1')
+            logger.info("✅ ClickHouse connection test passed")
+
         except Exception as e:
             logger.error(f"❌ Failed to connect to ClickHouse: {e}")
             raise
 
     def execute(self, query, params=None):
         try:
-            return self.client.execute(query, params)
+            result = self.client.execute(query, params)
+            logger.debug(f"Query executed successfully: {query}")
+            return result
         except Exception as e:
             logger.error(f"❌ Query execution failed: {e}")
             raise

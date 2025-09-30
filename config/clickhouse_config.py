@@ -12,5 +12,11 @@ CLICKHOUSE_CONFIG = {
     'database': os.getenv('CLICKHOUSE_DB'),
     'secure': True,
     'verify': True,
-    'ca_certs': '/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt'
+    'ca_certs': '/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt',
+    # Дополнительные настройки для Yandex Cloud
+    'settings': {
+        'use_numpy': False,
+        'connect_timeout': 10,
+        'send_receive_timeout': 30,
+    }
 }
