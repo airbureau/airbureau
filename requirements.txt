@@ -1,4 +1,6 @@
-clickhouse-driver==0.2.9
-python-dotenv==1.0.1
-pytz==2025.2
-tzlocal==5.3.1
+clickhouse-driver>=0.2.9
+python-dotenv>=1.0.1
+pytz>=2025.2
+tzlocal>=5.3.1
+pybit>=5.11.0
+requests>=2.32.5
