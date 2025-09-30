@@ -1,4 +1,4 @@
-# Конфиги с ключами
+# Conf and keys
 config/
 secrets/
 *.env
@@ -11,22 +11,33 @@ secrets/
 logs/
 *.log
 
-# Базы данных
+# Databases
 *.db
 *.sqlite3
 
-# Питон
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
 *.pyc
 *.pyo
 *.pyd
-.Python
-venv/
-env/
 
-# IDE
+# IDE / PyCharm
 .vscode/
 .idea/
 *.swp
 *.swo
-.env
+*.iws
+*.iml
+*.ipr
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
