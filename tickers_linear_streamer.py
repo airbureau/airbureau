@@ -23,9 +23,16 @@ class LinearTickerStreamer:
 
     def setup_tables(self):
         """Создаем таблицу для linear тикеров если не существует"""
+        # Сначала удаляем старую таблицу (если нужно пересоздать)
+        try:
+            self.ch_client.execute("DROP TABLE IF EXISTS bybit_tickers_linear")
+            print("🗑️ Old linear table dropped")
+        except Exception as e:
+            print(f"ℹ️ No existing linear table to drop: {e}")
+
         table_schema = """
             `event_time` DateTime64(3),
-            `receive_time` DateTime64(3),
+            `receive_time` DateTime64(3), 
             `insert_time` DateTime64(3) DEFAULT now64(),
             `symbol` String,
             `tick_direction` String,
@@ -50,7 +57,25 @@ class LinearTickerStreamer:
             INDEX idx_symbol_event (symbol, event_time) TYPE minmax GRANULARITY 3
         """
         self.ch_client.create_table("bybit_tickers_linear", table_schema)
-        print("✅ Linear tickers table ready")
+        print("✅ Linear tickers table created successfully")
+
+    def safe_float(self, value, default=0.0):
+        """Безопасное преобразование в float"""
+        if value is None or value == '':
+            return default
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+
+    def safe_timestamp(self, ts_value):
+        """Безопасное преобразование timestamp"""
+        if not ts_value:
+            return datetime.now()
+        try:
+            return datetime.fromtimestamp(int(ts_value) / 1000)
+        except (ValueError, TypeError):
+            return datetime.now()
 
     def handle_linear_ticker(self, message):
         """Обработчик linear тикеров"""
@@ -60,41 +85,43 @@ class LinearTickerStreamer:
                 return
 
             # Временные метки
-            event_time = datetime.fromtimestamp(int(data.get('ts', 0)) / 1000) if data.get('ts') else datetime.now()
+            event_time = self.safe_timestamp(data.get('ts'))
             receive_time = datetime.now()
 
             # Обработка next_funding_time
             next_funding_time = None
-            if data.get('nextFundingTime'):
+            funding_time_value = data.get('nextFundingTime')
+            if funding_time_value:
                 try:
-                    next_funding_time = datetime.fromtimestamp(int(data['nextFundingTime']) / 1000)
+                    next_funding_time = datetime.fromtimestamp(int(funding_time_value) / 1000)
                 except:
                     next_funding_time = None
 
-            # Подготовка данных для вставки
+            # Подготовка данных для вставки - ВНИМАНИЕ: 22 значения для 23 колонок (insert_time auto)
             record = (
-                event_time,
-                receive_time,
-                data.get('symbol'),
-                data.get('tickDirection', ''),
-                float(data.get('lastPrice', 0)),
-                float(data.get('prevPrice24h', 0)),
-                float(data.get('price24hPcnt', 0)),
-                float(data.get('highPrice24h', 0)),
-                float(data.get('lowPrice24h', 0)),
-                float(data.get('prevPrice1h', 0)),
-                float(data.get('markPrice', 0)),
-                float(data.get('indexPrice', 0)),
-                float(data.get('openInterest', 0)),
-                float(data.get('openInterestValue', 0)),
-                float(data.get('turnover24h', 0)),
-                float(data.get('volume24h', 0)),
-                float(data.get('fundingRate', 0)),
-                next_funding_time,
-                float(data.get('bid1Price', 0)),
-                float(data.get('bid1Size', 0)),
-                float(data.get('ask1Price', 0)),
-                float(data.get('ask1Size', 0))
+                event_time,  # event_time
+                receive_time,  # receive_time
+                # insert_time пропускаем - будет DEFAULT now64()
+                data.get('symbol', ''),  # symbol
+                data.get('tickDirection', ''),  # tick_direction
+                self.safe_float(data.get('lastPrice')),  # last_price
+                self.safe_float(data.get('prevPrice24h')),  # prev_price_24h
+                self.safe_float(data.get('price24hPcnt')),  # price_24h_pcnt
+                self.safe_float(data.get('highPrice24h')),  # high_price_24h
+                self.safe_float(data.get('lowPrice24h')),  # low_price_24h
+                self.safe_float(data.get('prevPrice1h')),  # prev_price_1h
+                self.safe_float(data.get('markPrice')),  # mark_price
+                self.safe_float(data.get('indexPrice')),  # index_price
+                self.safe_float(data.get('openInterest')),  # open_interest
+                self.safe_float(data.get('openInterestValue')),  # open_interest_value
+                self.safe_float(data.get('turnover24h')),  # turnover_24h
+                self.safe_float(data.get('volume24h')),  # volume_24h
+                self.safe_float(data.get('fundingRate')),  # funding_rate
+                next_funding_time,  # next_funding_time
+                self.safe_float(data.get('bid1Price')),  # bid1_price
+                self.safe_float(data.get('bid1Size')),  # bid1_size
+                self.safe_float(data.get('ask1Price')),  # ask1_price
+                self.safe_float(data.get('ask1Size'))  # ask1_size
             )
 
             # Вставка в ClickHouse
@@ -103,6 +130,9 @@ class LinearTickerStreamer:
 
         except Exception as e:
             print(f"❌ Error processing linear ticker: {e}")
+            # Детальная диагностика
+            print(f"   Data: {data}")
+            print(f"   Record length: {len(record) if 'record' in locals() else 'N/A'}")
 
     def get_linear_symbols(self):
         """Получение списка всех linear пар USDT"""
@@ -150,7 +180,6 @@ class LinearTickerStreamer:
     def subscribe_to_group(self, symbols):
         """Подписка на группу символов"""
         try:
-            # Используем правильный метод ticker_stream для linear
             self.ws.ticker_stream(
                 symbol=symbols,
                 callback=self.handle_linear_ticker
