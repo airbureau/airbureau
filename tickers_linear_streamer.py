@@ -150,9 +150,9 @@ class LinearTickerStreamer:
     def subscribe_to_group(self, symbols):
         """Подписка на группу символов"""
         try:
+            # Используем правильный метод ticker_stream для linear
             self.ws.ticker_stream(
                 symbol=symbols,
-                category="linear",
                 callback=self.handle_linear_ticker
             )
             print(f"✅ Subscribed to {len(symbols)} linear symbols")

@@ -114,9 +114,9 @@ class SpotTickerStreamer:
         for i in range(0, len(symbols), args_limit):
             chunk = symbols[i:i + args_limit]
             try:
+                # Используем правильный метод ticker_stream для spot
                 self.ws.ticker_stream(
                     symbol=chunk,
-                    category="spot",
                     callback=self.handle_spot_ticker
                 )
                 print(f"✅ Subscribed to {len(chunk)} spot symbols: {chunk}")
