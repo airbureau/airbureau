@@ -1,5 +1,5 @@
 # Conf and keys
-config/
+#config/
 secrets/
 *.env
 .env
