@@ -2,6 +2,8 @@
 config/
 secrets/
 *.env
+.env
+.env.*
 .env.local
 .env.production
 
