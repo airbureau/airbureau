@@ -33,7 +33,6 @@ class SpotTickerStreamer:
         table_schema = """
             `event_time` DateTime64(3),
             `receive_time` DateTime64(3),
-            `insert_time` DateTime64(3) DEFAULT now64(),
             `symbol` String,
             `tick_direction` String,
             `last_price` Float64,
@@ -50,6 +49,7 @@ class SpotTickerStreamer:
             `bid1_size` Float64,
             `ask1_price` Float64,
             `ask1_size` Float64,
+            `insert_time` DateTime64(3) DEFAULT now64(),
             INDEX idx_symbol_event (symbol, event_time) TYPE minmax GRANULARITY 3
         """
         self.ch_client.create_table("bybit_tickers_spot", table_schema)
@@ -84,11 +84,10 @@ class SpotTickerStreamer:
             event_time = self.safe_timestamp(data.get('ts'))
             receive_time = datetime.now()
 
-            # Подготовка данных для вставки - 18 значений для 19 колонок (insert_time auto)
+            # Подготовка данных для вставки - теперь 18 значений для 18 колонок (insert_time имеет DEFAULT)
             record = (
                 event_time,  # event_time
                 receive_time,  # receive_time
-                # insert_time пропускаем - будет DEFAULT now64()
                 data.get('symbol', ''),  # symbol
                 data.get('tickDirection', ''),  # tick_direction
                 self.safe_float(data.get('lastPrice')),  # last_price
@@ -105,6 +104,7 @@ class SpotTickerStreamer:
                 self.safe_float(data.get('bid1Size')),  # bid1_size
                 self.safe_float(data.get('ask1Price')),  # ask1_price
                 self.safe_float(data.get('ask1Size'))  # ask1_size
+                # insert_time пропускаем - будет DEFAULT now64()
             )
 
             # Вставка в ClickHouse
@@ -114,7 +114,6 @@ class SpotTickerStreamer:
         except Exception as e:
             print(f"❌ Error processing spot ticker: {e}")
             print(f"   Data: {data}")
-            print(f"   Record length: {len(record) if 'record' in locals() else 'N/A'}")
 
     def get_spot_symbols(self):
         """Получение списка всех spot пар USDT"""
