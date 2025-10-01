@@ -50,7 +50,7 @@ class LinearTickerStreamer:
             `turnover_24h` Float64,
             `volume_24h` Float64,
             `funding_rate` Float64,
-            `next_funding_time` DateTime64(3),
+            `next_funding_time` Nullable(DateTime64(3)),
             `bid1_price` Float64,
             `bid1_size` Float64,
             `ask1_price` Float64,
@@ -83,6 +83,15 @@ class LinearTickerStreamer:
         except (ValueError, TypeError):
             return datetime.now()
 
+    def safe_datetime(self, dt_value):
+        """Безопасное преобразование datetime с обработкой None"""
+        if not dt_value or dt_value == '':
+            return None
+        try:
+            return datetime.fromtimestamp(int(dt_value) / 1000)
+        except (ValueError, TypeError):
+            return None
+
     def handle_linear_ticker(self, message):
         """Обработчик linear тикеров"""
         try:
@@ -94,14 +103,8 @@ class LinearTickerStreamer:
             event_time = self.safe_timestamp(data.get('ts'))
             receive_time = datetime.now()
 
-            # Обработка next_funding_time - исправляем ошибку с None
-            next_funding_time = None
-            funding_time_value = data.get('nextFundingTime')
-            if funding_time_value and funding_time_value != '':
-                try:
-                    next_funding_time = datetime.fromtimestamp(int(funding_time_value) / 1000)
-                except:
-                    next_funding_time = None
+            # Обработка next_funding_time - безопасная обработка None
+            next_funding_time = self.safe_datetime(data.get('nextFundingTime'))
 
             # Подготовка данных для вставки - 22 значения для 22 колонок
             record = (
@@ -122,7 +125,7 @@ class LinearTickerStreamer:
                 self.safe_float(data.get('turnover24h')),  # turnover_24h
                 self.safe_float(data.get('volume24h')),  # volume_24h
                 self.safe_float(data.get('fundingRate')),  # funding_rate
-                next_funding_time,  # next_funding_time
+                next_funding_time,  # next_funding_time (может быть None)
                 self.safe_float(data.get('bid1Price')),  # bid1_price
                 self.safe_float(data.get('bid1Size')),  # bid1_size
                 self.safe_float(data.get('ask1Price')),  # ask1_price
