@@ -23,16 +23,18 @@ class LinearTickerStreamer:
 
     def setup_tables(self):
         """Создаем таблицу для linear тикеров если не существует"""
-        # Сначала удаляем старую таблицу (если нужно пересоздать)
         try:
             self.ch_client.execute("DROP TABLE IF EXISTS bybit_tickers_linear")
             print("🗑️ Old linear table dropped")
         except Exception as e:
             print(f"ℹ️ No existing linear table to drop: {e}")
 
-        table_schema = """
+        # Создаем таблицу с правильной структурой, включающей все нужные колонки
+        create_table_sql = """
+        CREATE TABLE bybit_tickers_linear
+        (
             `event_time` DateTime64(3),
-            `receive_time` DateTime64(3), 
+            `receive_time` DateTime64(3),
             `insert_time` DateTime64(3) DEFAULT now64(),
             `symbol` String,
             `tick_direction` String,
@@ -55,8 +57,13 @@ class LinearTickerStreamer:
             `ask1_price` Float64,
             `ask1_size` Float64,
             INDEX idx_symbol_event (symbol, event_time) TYPE minmax GRANULARITY 3
+        )
+        ENGINE = MergeTree
+        PARTITION BY toYYYYMMDD(event_time)
+        ORDER BY (symbol, event_time)
+        SETTINGS index_granularity = 8192;
         """
-        self.ch_client.create_table("bybit_tickers_linear", table_schema)
+        self.ch_client.execute(create_table_sql)
         print("✅ Linear tickers table created successfully")
 
     def safe_float(self, value, default=0.0):
@@ -97,7 +104,7 @@ class LinearTickerStreamer:
                 except:
                     next_funding_time = None
 
-            # Подготовка данных для вставки - ВНИМАНИЕ: 22 значения для 23 колонок (insert_time auto)
+            # Подготовка данных для вставки - 22 значения для 23 колонок (insert_time имеет DEFAULT)
             record = (
                 event_time,  # event_time
                 receive_time,  # receive_time
@@ -130,7 +137,6 @@ class LinearTickerStreamer:
 
         except Exception as e:
             print(f"❌ Error processing linear ticker: {e}")
-            # Детальная диагностика
             print(f"   Data: {data}")
             print(f"   Record length: {len(record) if 'record' in locals() else 'N/A'}")
 
