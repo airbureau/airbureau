@@ -35,7 +35,6 @@ class LinearTickerStreamer:
         (
             `event_time` DateTime64(3),
             `receive_time` DateTime64(3),
-            `insert_time` DateTime64(3) DEFAULT now64(),
             `symbol` String,
             `tick_direction` String,
             `last_price` Float64,
@@ -108,7 +107,6 @@ class LinearTickerStreamer:
             record = (
                 event_time,  # event_time
                 receive_time,  # receive_time
-                # insert_time пропускаем - будет DEFAULT now64()
                 data.get('symbol', ''),  # symbol
                 data.get('tickDirection', ''),  # tick_direction
                 self.safe_float(data.get('lastPrice')),  # last_price
