@@ -29,13 +29,12 @@ class LinearTickerStreamer:
         except Exception as e:
             print(f"ℹ️ No existing linear table to drop: {e}")
 
-        # Создаем таблицу с правильной структурой
+        # Создаем таблицу с правильной структурой (22 колонки)
         create_table_sql = """
         CREATE TABLE bybit_tickers_linear
         (
             `event_time` DateTime64(3),
             `receive_time` DateTime64(3),
-            `insert_time` DateTime64(3) DEFAULT now64(),
             `symbol` String,
             `tick_direction` String,
             `last_price` Float64,
@@ -84,15 +83,6 @@ class LinearTickerStreamer:
         except (ValueError, TypeError):
             return datetime.now()
 
-    def safe_datetime(self, dt_value):
-        """Безопасное преобразование datetime"""
-        if not dt_value:
-            return None
-        try:
-            return datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
-        except (ValueError, TypeError):
-            return None
-
     def handle_linear_ticker(self, message):
         """Обработчик linear тикеров"""
         try:
@@ -113,14 +103,10 @@ class LinearTickerStreamer:
                 except:
                     next_funding_time = None
 
-            # Обработка delivery_time
-            delivery_time = self.safe_datetime(data.get('deliveryTime'))
-
-            # Подготовка данных для вставки - 23 значения для 23 колонок
+            # Подготовка данных для вставки - 22 значения для 22 колонок
             record = (
                 event_time,  # event_time
                 receive_time,  # receive_time
-                # insert_time пропускаем - будет DEFAULT now64()
                 data.get('symbol', ''),  # symbol
                 data.get('tickDirection', ''),  # tick_direction
                 self.safe_float(data.get('lastPrice')),  # last_price
@@ -140,27 +126,16 @@ class LinearTickerStreamer:
                 self.safe_float(data.get('bid1Price')),  # bid1_price
                 self.safe_float(data.get('bid1Size')),  # bid1_size
                 self.safe_float(data.get('ask1Price')),  # ask1_price
-                self.safe_float(data.get('ask1Size')),  # ask1_size
-                # Добавляем delivery_time как 23-ю колонку
-                delivery_time  # delivery_time
+                self.safe_float(data.get('ask1Size'))  # ask1_size
             )
 
             # Проверяем длину записи
-            if len(record) != 23:
-                print(f"⚠️ Warning: Record length is {len(record)}, expected 23")
+            if len(record) != 22:
+                print(f"⚠️ Warning: Record length is {len(record)}, expected 22")
                 return
 
-            # Вставка в ClickHouse с явным указанием колонок
-            columns = [
-                'event_time', 'receive_time', 'symbol', 'tick_direction',
-                'last_price', 'prev_price_24h', 'price_24h_pcnt', 'high_price_24h',
-                'low_price_24h', 'prev_price_1h', 'mark_price', 'index_price',
-                'open_interest', 'open_interest_value', 'turnover_24h', 'volume_24h',
-                'funding_rate', 'next_funding_time', 'bid1_price', 'bid1_size',
-                'ask1_price', 'ask1_size', 'delivery_time'
-            ]
-
-            self.ch_client.insert_data("bybit_tickers_linear", [record], columns=columns)
+            # Вставка в ClickHouse без указания колонок
+            self.ch_client.insert_data("bybit_tickers_linear", [record])
             print(f"📊 Linear: {data.get('symbol')} - {data.get('lastPrice')}")
 
         except Exception as e:
