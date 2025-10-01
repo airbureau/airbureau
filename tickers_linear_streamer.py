@@ -29,12 +29,13 @@ class LinearTickerStreamer:
         except Exception as e:
             print(f"ℹ️ No existing linear table to drop: {e}")
 
-        # Создаем таблицу с правильной структурой, включающей все нужные колонки
+        # Создаем таблицу с правильной структурой
         create_table_sql = """
         CREATE TABLE bybit_tickers_linear
         (
             `event_time` DateTime64(3),
             `receive_time` DateTime64(3),
+            `insert_time` DateTime64(3) DEFAULT now64(),
             `symbol` String,
             `tick_direction` String,
             `last_price` Float64,
@@ -83,6 +84,15 @@ class LinearTickerStreamer:
         except (ValueError, TypeError):
             return datetime.now()
 
+    def safe_datetime(self, dt_value):
+        """Безопасное преобразование datetime"""
+        if not dt_value:
+            return None
+        try:
+            return datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            return None
+
     def handle_linear_ticker(self, message):
         """Обработчик linear тикеров"""
         try:
@@ -94,19 +104,23 @@ class LinearTickerStreamer:
             event_time = self.safe_timestamp(data.get('ts'))
             receive_time = datetime.now()
 
-            # Обработка next_funding_time
+            # Обработка next_funding_time - исправляем ошибку с None
             next_funding_time = None
             funding_time_value = data.get('nextFundingTime')
-            if funding_time_value:
+            if funding_time_value and funding_time_value != '':
                 try:
                     next_funding_time = datetime.fromtimestamp(int(funding_time_value) / 1000)
                 except:
                     next_funding_time = None
 
-            # Подготовка данных для вставки - 22 значения для 23 колонок (insert_time имеет DEFAULT)
+            # Обработка delivery_time
+            delivery_time = self.safe_datetime(data.get('deliveryTime'))
+
+            # Подготовка данных для вставки - 23 значения для 23 колонок
             record = (
                 event_time,  # event_time
                 receive_time,  # receive_time
+                # insert_time пропускаем - будет DEFAULT now64()
                 data.get('symbol', ''),  # symbol
                 data.get('tickDirection', ''),  # tick_direction
                 self.safe_float(data.get('lastPrice')),  # last_price
@@ -126,17 +140,32 @@ class LinearTickerStreamer:
                 self.safe_float(data.get('bid1Price')),  # bid1_price
                 self.safe_float(data.get('bid1Size')),  # bid1_size
                 self.safe_float(data.get('ask1Price')),  # ask1_price
-                self.safe_float(data.get('ask1Size'))  # ask1_size
+                self.safe_float(data.get('ask1Size')),  # ask1_size
+                # Добавляем delivery_time как 23-ю колонку
+                delivery_time  # delivery_time
             )
 
-            # Вставка в ClickHouse
-            self.ch_client.insert_data("bybit_tickers_linear", [record])
+            # Проверяем длину записи
+            if len(record) != 23:
+                print(f"⚠️ Warning: Record length is {len(record)}, expected 23")
+                return
+
+            # Вставка в ClickHouse с явным указанием колонок
+            columns = [
+                'event_time', 'receive_time', 'symbol', 'tick_direction',
+                'last_price', 'prev_price_24h', 'price_24h_pcnt', 'high_price_24h',
+                'low_price_24h', 'prev_price_1h', 'mark_price', 'index_price',
+                'open_interest', 'open_interest_value', 'turnover_24h', 'volume_24h',
+                'funding_rate', 'next_funding_time', 'bid1_price', 'bid1_size',
+                'ask1_price', 'ask1_size', 'delivery_time'
+            ]
+
+            self.ch_client.insert_data("bybit_tickers_linear", [record], columns=columns)
             print(f"📊 Linear: {data.get('symbol')} - {data.get('lastPrice')}")
 
         except Exception as e:
             print(f"❌ Error processing linear ticker: {e}")
             print(f"   Data: {data}")
-            print(f"   Record length: {len(record) if 'record' in locals() else 'N/A'}")
 
     def get_linear_symbols(self):
         """Получение списка всех linear пар USDT"""
