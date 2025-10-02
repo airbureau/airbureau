@@ -19,41 +19,7 @@ class SpotTickerStreamer:
     def __init__(self):
         self.ch_client = ClickHouseClient()
         self.ws = None
-        self.setup_tables()
 
-    def setup_tables(self):
-        """Создаем таблицу для spot тикеров если не существует"""
-        # Сначала удаляем старую таблицу (если нужно пересоздать)
-        try:
-            self.ch_client.execute("DROP TABLE IF EXISTS bybit_tickers_spot")
-            print("🗑️ Old spot table dropped")
-        except Exception as e:
-            print(f"ℹ️ No existing spot table to drop: {e}")
-
-        table_schema = """
-            `event_time` DateTime64(3),
-            `receive_time` DateTime64(3),
-            `symbol` String,
-            `tick_direction` String,
-            `last_price` Float64,
-            `prev_price_24h` Float64,
-            `price_24h_pcnt` Float64,
-            `high_price_24h` Float64,
-            `low_price_24h` Float64,
-            `prev_price_1h` Float64,
-            `mark_price` Float64,
-            `index_price` Float64,
-            `turnover_24h` Float64,
-            `volume_24h` Float64,
-            `bid1_price` Float64,
-            `bid1_size` Float64,
-            `ask1_price` Float64,
-            `ask1_size` Float64,
-            `insert_time` DateTime64(3) DEFAULT now64(),
-            INDEX idx_symbol_event (symbol, event_time) TYPE minmax GRANULARITY 3
-        """
-        self.ch_client.create_table("bybit_tickers_spot", table_schema)
-        print("✅ Spot tickers table created successfully")
 
     def safe_float(self, value, default=0.0):
         """Безопасное преобразование в float"""
@@ -109,7 +75,7 @@ class SpotTickerStreamer:
 
             # Вставка в ClickHouse
             self.ch_client.insert_data("bybit_tickers_spot", [record])
-            print(f"📊 Spot: {data.get('symbol')} - {data.get('lastPrice')}")
+            # print(f"📊 Spot: {data.get('symbol')} - {data.get('lastPrice')}")
 
         except Exception as e:
             print(f"❌ Error processing spot ticker: {e}")
