@@ -117,6 +117,7 @@ class LinearTickerStreamer:
                 print(f"⚠️ Warning: Record length is {len(record)}, expected 22")
                 return
 
+
             # Вставка в ClickHouse без указания колонок
             self.ch_client.insert_data("bybit_tickers_linear", [record])
 
