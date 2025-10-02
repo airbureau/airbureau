@@ -13,12 +13,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from utils.clickhouse_client import ClickHouseClient
+from bot import bot  # Импортируем глобальный экземпляр бота
 
 
 class LinearTickerStreamer:
     def __init__(self):
         self.ch_client = ClickHouseClient()
         self.ws = None
+
+        # 🔥 ЗАПУСКАЕМ БОТА ПРЯМО ЗДЕСЬ!
+        bot.start()
+        print("✅ Telegram Bot integrated")
+
 
     def safe_float(self, value, default=0.0):
         """Безопасное преобразование в float"""
@@ -99,6 +105,8 @@ class LinearTickerStreamer:
         except Exception as e:
             print(f"❌ Error processing linear ticker: {e}")
             print(f"   Data: {data}")
+            # 🔥 ОТПРАВКА ОШИБКИ
+            bot.send_alert("ERROR", f"Ошибка в тикере: {e}")
 
     def get_linear_symbols(self):
         """Получение списка всех linear пар USDT"""
