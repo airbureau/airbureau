@@ -33,7 +33,7 @@ class LinearTickerStreamer:
         self.ch_client = ClickHouseClient()
         self.ws = None
 
-        # 🔥 ОТПРАВЛЯЕМ СООБЩЕНИЕ О ЗАПУСКЕ
+        # 🔥 ОТПРАВЛЯЕМ СООБЩЕНИЕ О ЗАПУСКЕ (без вызова start() - его больше нет)
         if BOT_AVAILABLE:
             print("✅ Sending startup message...")
             success = bot.send_alert("SYSTEM", "Linear ticker streamer started successfully")
