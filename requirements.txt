@@ -4,3 +4,6 @@ pytz>=2025.2
 tzlocal>=5.3.1
 pybit>=5.11.0
 requests>=2.32.5
+python-telegram-bot>=22.5
+pandas>=2.3.3
+numpy>=2.3.2
