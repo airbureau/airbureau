@@ -19,51 +19,6 @@ class LinearTickerStreamer:
     def __init__(self):
         self.ch_client = ClickHouseClient()
         self.ws = None
-        self.setup_tables()
-
-    def setup_tables(self):
-        """Создаем таблицу для linear тикеров если не существует"""
-        try:
-            self.ch_client.execute("DROP TABLE IF EXISTS bybit_tickers_linear")
-            print("🗑️ Old linear table dropped")
-        except Exception as e:
-            print(f"ℹ️ No existing linear table to drop: {e}")
-
-        # Создаем таблицу с правильной структурой (22 колонки)
-        create_table_sql = """
-        CREATE TABLE bybit_tickers_linear
-        (
-            `event_time` DateTime64(3),
-            `receive_time` DateTime64(3),
-            `symbol` String,
-            `tick_direction` String,
-            `last_price` Float64,
-            `prev_price_24h` Float64,
-            `price_24h_pcnt` Float64,
-            `high_price_24h` Float64,
-            `low_price_24h` Float64,
-            `prev_price_1h` Float64,
-            `mark_price` Float64,
-            `index_price` Float64,
-            `open_interest` Float64,
-            `open_interest_value` Float64,
-            `turnover_24h` Float64,
-            `volume_24h` Float64,
-            `funding_rate` Float64,
-            `next_funding_time` Nullable(DateTime64(3)),
-            `bid1_price` Float64,
-            `bid1_size` Float64,
-            `ask1_price` Float64,
-            `ask1_size` Float64,
-            INDEX idx_symbol_event (symbol, event_time) TYPE minmax GRANULARITY 3
-        )
-        ENGINE = MergeTree
-        PARTITION BY toYYYYMMDD(event_time)
-        ORDER BY (symbol, event_time)
-        SETTINGS index_granularity = 8192;
-        """
-        self.ch_client.execute(create_table_sql)
-        print("✅ Linear tickers table created successfully")
 
     def safe_float(self, value, default=0.0):
         """Безопасное преобразование в float"""
@@ -139,7 +94,7 @@ class LinearTickerStreamer:
 
             # Вставка в ClickHouse без указания колонок
             self.ch_client.insert_data("bybit_tickers_linear", [record])
-            print(f"📊 Linear: {data.get('symbol')} - {data.get('lastPrice')}")
+            # print(f"📊 Linear: {data.get('symbol')} - {data.get('lastPrice')}")
 
         except Exception as e:
             print(f"❌ Error processing linear ticker: {e}")
