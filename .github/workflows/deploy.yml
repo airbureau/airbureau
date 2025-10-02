@@ -45,7 +45,6 @@ jobs:
           sudo systemctl start bybit-linear-ticker.service
           sudo systemctl enable bybit-linear-ticker.service
           
-          
           # Проверяем статус
           echo "✅ Checking service status..."
           sudo systemctl status bybit-linear-ticker.service --no-pager
