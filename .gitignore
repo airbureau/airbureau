@@ -41,3 +41,6 @@ venv/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+#GitHub
+/.github/workflows/deploy_old.yml
