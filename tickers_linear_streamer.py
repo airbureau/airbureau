@@ -13,7 +13,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from utils.clickhouse_client import ClickHouseClient
-from bot import bot  # Импортируем глобальный экземпляр бота
+
+# 🔥 ИМПОРТИРУЕМ БОТА
+try:
+    from bot import bot
+
+    BOT_AVAILABLE = True
+    print("✅ Telegram Bot imported successfully")
+except ImportError as e:
+    print(f"❌ Bot import error: {e}")
+    BOT_AVAILABLE = False
+except Exception as e:
+    print(f"❌ Other bot error: {e}")
+    BOT_AVAILABLE = False
 
 
 class LinearTickerStreamer:
@@ -21,10 +33,62 @@ class LinearTickerStreamer:
         self.ch_client = ClickHouseClient()
         self.ws = None
 
-        # 🔥 ЗАПУСКАЕМ БОТА ПРЯМО ЗДЕСЬ!
-        bot.start()
-        print("✅ Telegram Bot integrated")
+        # 🔥 ОТПРАВЛЯЕМ СООБЩЕНИЕ О ЗАПУСКЕ
+        if BOT_AVAILABLE:
+            print("✅ Sending startup message...")
+            success = bot.send_alert("SYSTEM", "Linear ticker streamer started successfully")
+            if success:
+                print("✅ Startup message sent to Telegram")
+            else:
+                print("❌ Failed to send startup message")
+        else:
+            print("⚠️ Telegram Bot not available")
 
+        self.setup_tables()
+
+    def setup_tables(self):
+        """Создаем таблицу для linear тикеров если не существует"""
+        try:
+            self.ch_client.execute("DROP TABLE IF EXISTS bybit_tickers_linear")
+            print("🗑️ Old linear table dropped")
+        except Exception as e:
+            print(f"ℹ️ No existing linear table to drop: {e}")
+
+        # Создаем таблицу с правильной структурой (22 колонки)
+        create_table_sql = """
+        CREATE TABLE bybit_tickers_linear
+        (
+            `event_time` DateTime64(3),
+            `receive_time` DateTime64(3),
+            `symbol` String,
+            `tick_direction` String,
+            `last_price` Float64,
+            `prev_price_24h` Float64,
+            `price_24h_pcnt` Float64,
+            `high_price_24h` Float64,
+            `low_price_24h` Float64,
+            `prev_price_1h` Float64,
+            `mark_price` Float64,
+            `index_price` Float64,
+            `open_interest` Float64,
+            `open_interest_value` Float64,
+            `turnover_24h` Float64,
+            `volume_24h` Float64,
+            `funding_rate` Float64,
+            `next_funding_time` Nullable(DateTime64(3)),
+            `bid1_price` Float64,
+            `bid1_size` Float64,
+            `ask1_price` Float64,
+            `ask1_size` Float64,
+            INDEX idx_symbol_event (symbol, event_time) TYPE minmax GRANULARITY 3
+        )
+        ENGINE = MergeTree
+        PARTITION BY toYYYYMMDD(event_time)
+        ORDER BY (symbol, event_time)
+        SETTINGS index_granularity = 8192;
+        """
+        self.ch_client.execute(create_table_sql)
+        print("✅ Linear tickers table created successfully")
 
     def safe_float(self, value, default=0.0):
         """Безопасное преобразование в float"""
@@ -100,13 +164,30 @@ class LinearTickerStreamer:
 
             # Вставка в ClickHouse без указания колонок
             self.ch_client.insert_data("bybit_tickers_linear", [record])
-            # print(f"📊 Linear: {data.get('symbol')} - {data.get('lastPrice')}")
+
+            symbol = data.get('symbol', '')
+            last_price = self.safe_float(data.get('lastPrice'))
+            print(f"📊 Linear: {symbol} - {last_price}")
+
+            # 🔥 ОТПРАВКА АЛЕРТА В ТЕЛЕГРАМ ДЛЯ ОСНОВНЫХ СИМВОЛОВ
+            if BOT_AVAILABLE and symbol:
+                # Отправляем алерт только для основных криптовалют
+                major_symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOT']
+                if any(major in symbol for major in major_symbols):
+                    price_change = self.safe_float(data.get('price24hPcnt', 0)) * 100
+                    # Отправляем сообщение для теста (убрать условие с 5% после теста)
+                    if True:  # abs(price_change) > 5:  # Пока отправляем все для теста
+                        success = bot.send_alert("PRICE_ALERT",
+                                                 f"{symbol}: {last_price}\n"
+                                                 f"Изменение за 24ч: {price_change:+.2f}%")
+                        if success:
+                            print(f"✅ Telegram alert sent for {symbol}")
 
         except Exception as e:
             print(f"❌ Error processing linear ticker: {e}")
-            print(f"   Data: {data}")
-            # 🔥 ОТПРАВКА ОШИБКИ
-            bot.send_alert("ERROR", f"Ошибка в тикере: {e}")
+            # 🔥 ОТПРАВКА ОШИБКИ В ТЕЛЕГРАМ
+            if BOT_AVAILABLE:
+                bot.send_alert("ERROR", f"Ошибка обработки тикера: {e}")
 
     def get_linear_symbols(self):
         """Получение списка всех linear пар USDT"""
@@ -181,8 +262,12 @@ class LinearTickerStreamer:
                 sleep(1)
         except KeyboardInterrupt:
             print("⏹️ Stopping linear ticker streamer...")
+            if BOT_AVAILABLE:
+                bot.send_alert("SYSTEM", "Linear ticker streamer stopped")
         except Exception as e:
             print(f"❌ Linear streamer error: {e}")
+            if BOT_AVAILABLE:
+                bot.send_alert("ERROR", f"Linear streamer error: {e}")
 
 
 def main():
