@@ -15,6 +15,7 @@ load_dotenv()
 from utils.clickhouse_client import ClickHouseClient
 
 # 🔥 ИМПОРТИРУЕМ БОТА
+
 try:
     from bot import bot
 
